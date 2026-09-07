@@ -1,111 +1,111 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'config.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'router/app_router.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+// Paleta elegante: verde azulado profundo + acentos cálidos, sobre
+// fondo claro y suave. Se centraliza aquí para que todas las
+// pantallas hereden el mismo look sin repetir estilos.
+const _colorPrimario = Color(0xFF0F766E); // teal profundo
+const _colorAcento = Color(0xFFF59E0B); // ámbar cálido
+const _colorFondo = Color(0xFFF7F7F5);
+
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       title: 'OfertApp',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'OfertApp'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-  String _apiResult = 'Aún no se ha llamado a la API';
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  Future<void> _callBackend() async {
-    setState(() {
-      _apiResult = 'Cargando...';
-    });
-
-    try {
-      final response = await http.get(
-        Uri.parse('${Config.apiBaseUrl}/health'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _apiResult = 'Respuesta del backend: ${data.toString()}';
-        });
-      } else {
-        setState(() {
-          _apiResult = 'Error: código ${response.statusCode}';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _apiResult = 'Error de conexión: $e';
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('Presiona el botón:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _colorPrimario,
+          primary: _colorPrimario,
+          secondary: _colorAcento,
+          surface: Colors.white,
+        ),
+        scaffoldBackgroundColor: _colorFondo,
+        fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: _colorFondo,
+          foregroundColor: Color(0xFF1F2937),
+          elevation: 0,
+          centerTitle: false,
+          titleTextStyle: TextStyle(
+            color: Color(0xFF1F2937),
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        textTheme: const TextTheme(
+          headlineMedium: TextStyle(
+              fontWeight: FontWeight.w700, color: Color(0xFF1F2937)),
+          titleLarge: TextStyle(
+              fontWeight: FontWeight.w700, color: Color(0xFF1F2937)),
+          titleMedium: TextStyle(
+              fontWeight: FontWeight.w600, color: Color(0xFF1F2937)),
+          bodyMedium: TextStyle(color: Color(0xFF4B5563), height: 1.4),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _colorPrimario,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
             ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _callBackend,
-              child: const Text('Probar conexión con backend'),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                _apiResult,
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
+            textStyle:
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+            elevation: 0,
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: _colorPrimario,
+            textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: _colorPrimario, width: 1.6),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFDC2626)),
+          ),
+          labelStyle: const TextStyle(color: Color(0xFF6B7280)),
+        ),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFECECE9)),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+      routerConfig: router,
     );
   }
 }
