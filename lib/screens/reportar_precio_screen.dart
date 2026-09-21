@@ -69,12 +69,11 @@ class _ReportarPrecioScreenState extends ConsumerState<ReportarPrecioScreen> {
       _mensajeUbicacion = null;
     });
 
-    final estadoActual = await PermissionsService.estadoActualUbicacion();
-    EstadoPermiso estado = estadoActual;
-
-    if (estado == EstadoPermiso.noSolicitado) {
-      estado = await PermissionsService.solicitarUbicacion();
-    }
+    // permission_handler no distingue "nunca pedido" de "denegado" en su
+    // status (PermissionStatus.denied cubre ambos casos), así que hay que
+    // llamar request() siempre: si ya está concedido o denegado
+    // permanentemente, no vuelve a mostrar el diálogo del sistema.
+    final estado = await PermissionsService.solicitarUbicacion();
 
     switch (estado) {
       case EstadoPermiso.concedido:
@@ -116,12 +115,9 @@ class _ReportarPrecioScreenState extends ConsumerState<ReportarPrecioScreen> {
   Future<void> _tomarFoto() async {
     setState(() => _mensajeFoto = null);
 
-    final estadoActual = await PermissionsService.estadoActualCamara();
-    EstadoPermiso estado = estadoActual;
-
-    if (estado == EstadoPermiso.noSolicitado) {
-      estado = await PermissionsService.solicitarCamara();
-    }
+    // Ver comentario equivalente en _usarUbicacion(): request() se llama
+    // siempre, nunca gateado detrás de un chequeo de status previo.
+    final estado = await PermissionsService.solicitarCamara();
 
     switch (estado) {
       case EstadoPermiso.concedido:
