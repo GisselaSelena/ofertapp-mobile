@@ -17,6 +17,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _cargando = false;
+  bool _mostrarPassword = false;
   String? _errorGeneral;
 
   @override
@@ -123,11 +124,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _passwordController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Contraseña',
-                        prefixIcon: Icon(Icons.lock_outline_rounded),
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(_mostrarPassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined),
+                          onPressed: () => setState(
+                              () => _mostrarPassword = !_mostrarPassword),
+                        ),
                       ),
-                      obscureText: true,
+                      obscureText: !_mostrarPassword,
                       validator: _validarPassword,
                     ),
                     const SizedBox(height: 20),

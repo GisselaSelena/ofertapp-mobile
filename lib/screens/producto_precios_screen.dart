@@ -26,6 +26,7 @@ class _ProductoPreciosScreenState
   }
 
   Future<void> _cargarPrecios() async {
+    setState(() => _cargando = true);
     try {
       final apiClient = ref.read(apiClientProvider);
       final data =
@@ -45,6 +46,8 @@ class _ProductoPreciosScreenState
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final auth = ref.watch(authProvider);
+    final esAdmin = auth?.usuario.esAdministrador ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -58,96 +61,125 @@ class _ProductoPreciosScreenState
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
-              : _precios.isEmpty
-                  ? const Center(child: Text('Sin precios registrados aún'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(top: 8, bottom: 24),
-                      itemCount: _precios.length,
-                      itemBuilder: (context, index) {
-                        final precio = _precios[index];
-                        final esElMasBarato = index == 0;
+              : RefreshIndicator(
+                  onRefresh: _cargarPrecios,
+                  child: _precios.isEmpty
+                      ? ListView(children: const [
+                          SizedBox(height: 120),
+                          Center(child: Text('Sin precios registrados aún')),
+                        ])
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(top: 8, bottom: 24),
+                          itemCount: _precios.length,
+                          itemBuilder: (context, index) {
+                            final precio = _precios[index];
+                            final esElMasBarato = index == 0;
 
-                        return Card(
-                          color: esElMasBarato
-                              ? primary.withValues(alpha: 0.06)
-                              : Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: BorderSide(
+                            return Card(
                               color: esElMasBarato
-                                  ? primary.withValues(alpha: 0.35)
-                                  : const Color(0xFFECECE9),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (esElMasBarato)
-                                        Container(
-                                          margin:
-                                              const EdgeInsets.only(bottom: 6),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: primary,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: const Text(
-                                            'MEJOR PRECIO',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              letterSpacing: 0.5,
+                                  ? primary.withValues(alpha: 0.06)
+                                  : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color: esElMasBarato
+                                      ? primary.withValues(alpha: 0.35)
+                                      : const Color(0xFFECECE9),
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (esElMasBarato)
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                  bottom: 6),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: primary,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: const Text(
+                                                'MEJOR PRECIO',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      Text(
-                                        precio['establecimiento']['nombre'],
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                      ),
-                                      if (precio['establecimiento']
-                                              ['direccion'] !=
-                                          null)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 2),
-                                          child: Text(
+                                          Text(
                                             precio['establecimiento']
-                                                ['direccion'],
-                                            style: const TextStyle(
-                                                color: Color(0xFF6B7280),
-                                                fontSize: 13),
+                                                ['nombre'],
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium,
                                           ),
-                                        ),
-                                    ],
-                                  ),
+                                          Row(
+                                            children: [
+                                              if (precio['tiene_ubicacion'] ==
+                                                  true)
+                                                const Padding(
+                                                  padding: EdgeInsets.only(
+                                                      right: 6, top: 2),
+                                                  child: Icon(
+                                                      Icons
+                                                          .location_on_rounded,
+                                                      size: 14,
+                                                      color: Color(0xFF9CA3AF)),
+                                                ),
+                                              if (precio['tiene_foto_evidencia'] ==
+                                                  true)
+                                                const Padding(
+                                                  padding:
+                                                      EdgeInsets.only(top: 2),
+                                                  child: Icon(
+                                                      Icons
+                                                          .photo_camera_rounded,
+                                                      size: 14,
+                                                      color: Color(0xFF9CA3AF)),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      '\$${precio['valor']}',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: esElMasBarato
+                                            ? primary
+                                            : const Color(0xFF1F2937),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  '\$${precio['valor']}',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: esElMasBarato
-                                        ? primary
-                                        : const Color(0xFF1F2937),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+      floatingActionButton: esAdmin
+          ? FloatingActionButton.extended(
+              onPressed: () =>
+                  context.go('/productos/${widget.productoId}/precios/reportar'),
+              icon: const Icon(Icons.add_location_alt_outlined),
+              label: const Text('Reportar precio'),
+            )
+          : null,
     );
   }
 }

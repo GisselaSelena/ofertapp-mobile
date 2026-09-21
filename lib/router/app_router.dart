@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,13 +8,10 @@ import '../screens/register_screen.dart';
 import '../screens/productos_list_screen.dart';
 import '../screens/producto_form_screen.dart';
 import '../screens/producto_precios_screen.dart';
+import '../screens/reportar_precio_screen.dart';
 import '../screens/favoritos_screen.dart';
 import '../screens/perfil_screen.dart';
 
-/// Puente entre Riverpod y go_router: go_router necesita un
-/// Listenable para saber cuándo re-evaluar el `redirect`. Riverpod no
-/// es un Listenable por sí mismo, así que este notifier escucha el
-/// authProvider y notifica al router cada vez que cambia la sesión.
 class _AuthRouterRefresh extends ChangeNotifier {
   _AuthRouterRefresh(Ref ref) {
     ref.listen(authProvider, (_, __) => notifyListeners());
@@ -34,20 +30,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final vaARegistro = state.matchedLocation == '/register';
       final esRutaPublica = vaALogin || vaARegistro;
 
-      // No autenticado intentando entrar a una ruta protegida:
-      // se preserva el destino original en el query param `from`,
-      // para volver ahí automáticamente después del login.
       if (!estaAutenticado && !esRutaPublica) {
         return '/login?from=${Uri.encodeComponent(state.uri.toString())}';
       }
-
-      // Ya autenticado pero intentando ver login/registro de nuevo:
-      // lo mandamos directo al listado.
       if (estaAutenticado && esRutaPublica) {
         return '/productos';
       }
-
-      return null; // sin redirección
+      return null;
     },
     routes: [
       GoRoute(
@@ -65,7 +54,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/productos',
         builder: (context, state) => const ProductosListScreen(),
         routes: [
-          // RUTA ANIDADA: /productos/nuevo es hija de /productos.
           GoRoute(
             path: 'nuevo',
             builder: (context, state) => const ProductoFormScreen(),
@@ -73,14 +61,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
-        // Parámetro por la propia ruta (no por objetos transportados
-        // entre pantallas): con solo el `id` de la URL, esta pantalla
-        // puede reconstruirse por completo pidiendo sus datos al backend.
         path: '/productos/:id/precios',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return ProductoPreciosScreen(productoId: id);
         },
+        routes: [
+          GoRoute(
+            path: 'reportar',
+            builder: (context, state) {
+              final id = state.pathParameters['id']!;
+              return ReportarPrecioScreen(productoId: id);
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/favoritos',
