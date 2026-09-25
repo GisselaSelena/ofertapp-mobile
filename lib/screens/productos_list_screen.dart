@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../state/productos_state.dart';
 import '../state/auth_state.dart';
+import '../services/api_client.dart';
 import '../models/models.dart';
 
 class ProductosListScreen extends ConsumerStatefulWidget {
@@ -44,10 +45,16 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
         );
       }
     } catch (e) {
+      if (e is AuthException) {
+        ref.read(authProvider.notifier).sessionExpired();
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Ya estaba en tus favoritos, o hubo un error')),
+          SnackBar(
+            content: Text(e is AuthException
+                ? mensajeDeError(e)
+                : 'Ya estaba en tus favoritos, o hubo un error'),
+          ),
         );
       }
     } finally {

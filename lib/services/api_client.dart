@@ -99,3 +99,15 @@ class ApiException implements Exception {
   final String message;
   ApiException(this.message);
 }
+
+/// Traduce cualquier error capturado de una llamada a la API a un mensaje
+/// que se le puede mostrar directamente al usuario. Cubre las excepciones
+/// tipadas que lanza ApiClient; cualquier otra cosa (típicamente una
+/// SocketException por falta de conexión) cae al mensaje de red.
+String mensajeDeError(Object error) {
+  if (error is AuthException) return 'Tu sesión expiró. Inicia sesión de nuevo.';
+  if (error is ForbiddenException) return error.message;
+  if (error is ValidationException) return 'Revisa los datos ingresados.';
+  if (error is ApiException) return error.message;
+  return 'Sin conexión a internet. Intenta de nuevo.';
+}

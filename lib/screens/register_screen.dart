@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../services/api_client.dart';
 import '../state/auth_state.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -43,7 +44,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (!mounted) return;
       context.go('/productos');
     } catch (e) {
-      setState(() => _errorGeneral = 'No se pudo registrar. ¿Correo ya en uso?');
+      // El backend responde 409 (mapeado a ApiException genérica) cuando
+      // el correo ya está registrado; para el resto de errores (validación,
+      // sin conexión) se usa el mensaje específico.
+      setState(() => _errorGeneral = e is ApiException
+          ? 'No se pudo registrar. ¿El correo ya está en uso?'
+          : mensajeDeError(e));
     } finally {
       if (mounted) setState(() => _cargando = false);
     }

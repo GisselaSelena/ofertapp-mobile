@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../services/api_client.dart';
 import '../state/auth_state.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -62,7 +63,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context.go('/productos');
       }
     } catch (e) {
-      setState(() => _errorGeneral = 'Credenciales inválidas');
+      // Un 401 en login significa credenciales inválidas, no sesión
+      // expirada (no había sesión todavía) — se distingue del resto de
+      // los errores (sin conexión, servidor caído, etc).
+      setState(() => _errorGeneral =
+          e is AuthException ? 'Correo o contraseña incorrectos' : mensajeDeError(e));
     } finally {
       if (mounted) setState(() => _cargando = false);
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../state/auth_state.dart';
+import '../services/api_client.dart';
 
 class ProductoPreciosScreen extends ConsumerStatefulWidget {
   final String productoId;
@@ -19,6 +20,9 @@ class _ProductoPreciosScreenState
   String? _error;
   List<dynamic> _precios = [];
 
+  String? _resumenIa;
+  bool _cargandoResumenIa = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,11 +39,37 @@ class _ProductoPreciosScreenState
         _precios = data['precios'] as List;
         _cargando = false;
       });
+      if (_precios.isNotEmpty) {
+        _cargarResumenIa();
+      }
     } catch (e) {
+      if (e is AuthException) {
+        ref.read(authProvider.notifier).sessionExpired();
+      }
       setState(() {
-        _error = 'No se pudieron cargar los precios';
+        _error = mensajeDeError(e);
         _cargando = false;
       });
+    }
+  }
+
+  /// El resumen de IA es un complemento opcional a la comparación: si
+  /// falla o no está disponible, simplemente no se muestra la card —
+  /// nunca se interrumpe ni se le muestra un error al usuario por esto.
+  Future<void> _cargarResumenIa() async {
+    setState(() => _cargandoResumenIa = true);
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final data = await apiClient
+          .get('/api/productos/${widget.productoId}/resumen-ia');
+      if (!mounted) return;
+      setState(() {
+        _resumenIa =
+            data['disponible'] == true ? data['resumen'] as String? : null;
+        _cargandoResumenIa = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _cargandoResumenIa = false);
     }
   }
 
@@ -61,14 +91,54 @@ class _ProductoPreciosScreenState
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
-              : RefreshIndicator(
-                  onRefresh: _cargarPrecios,
-                  child: _precios.isEmpty
-                      ? ListView(children: const [
-                          SizedBox(height: 120),
-                          Center(child: Text('Sin precios registrados aún')),
-                        ])
-                      : ListView.builder(
+              : Column(
+                  children: [
+                    if (_cargandoResumenIa || _resumenIa != null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: Card(
+                          color: primary.withValues(alpha: 0.06),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                                color: primary.withValues(alpha: 0.2)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.auto_awesome_rounded,
+                                    color: primary, size: 18),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _cargandoResumenIa
+                                      ? const Text(
+                                          'Analizando precios con IA...',
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              color: Color(0xFF6B7280)),
+                                        )
+                                      : Text(
+                                          _resumenIa!,
+                                          style: const TextStyle(
+                                              fontSize: 13, height: 1.4),
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _cargarPrecios,
+                        child: _precios.isEmpty
+                            ? ListView(children: const [
+                                SizedBox(height: 120),
+                                Center(child: Text('Sin precios registrados aún')),
+                              ])
+                            : ListView.builder(
                           padding: const EdgeInsets.only(top: 8, bottom: 24),
                           itemCount: _precios.length,
                           itemBuilder: (context, index) {
@@ -171,6 +241,9 @@ class _ProductoPreciosScreenState
                             );
                           },
                         ),
+                      ),
+                    ),
+                  ],
                 ),
       floatingActionButton: esAdmin
           ? FloatingActionButton.extended(

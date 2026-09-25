@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../state/auth_state.dart';
+import '../services/api_client.dart';
 
 class FavoritosScreen extends ConsumerStatefulWidget {
   const FavoritosScreen({super.key});
@@ -32,8 +33,11 @@ class _FavoritosScreenState extends ConsumerState<FavoritosScreen> {
         _error = null;
       });
     } catch (e) {
+      if (e is AuthException) {
+        ref.read(authProvider.notifier).sessionExpired();
+      }
       setState(() {
-        _error = 'No se pudieron cargar los favoritos';
+        _error = mensajeDeError(e);
         _cargando = false;
       });
     }
@@ -47,9 +51,12 @@ class _FavoritosScreenState extends ConsumerState<FavoritosScreen> {
     try {
       await apiClient.delete('/api/favoritos/$favoritoId');
     } catch (e) {
+      if (e is AuthException) {
+        ref.read(authProvider.notifier).sessionExpired();
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo eliminar, intenta de nuevo')),
+          SnackBar(content: Text(mensajeDeError(e))),
         );
       }
       _cargar();

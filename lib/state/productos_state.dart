@@ -53,7 +53,7 @@ class ProductosNotifier extends StateNotifier<RemoteOpState<List<Producto>>> {
     } on ForbiddenException catch (e) {
       state = RemoteError(e.message);
     } catch (e) {
-      state = RemoteError('No se pudo cargar el listado');
+      state = RemoteError(mensajeDeError(e));
     }
   }
 }
@@ -94,7 +94,7 @@ class CrearProductoNotifier extends StateNotifier<RemoteOpState<Producto>> {
       state = RemoteError('Revisa los campos marcados',
           fieldErrors: e.fieldErrors);
     } catch (e) {
-      state = const RemoteError('No se pudo crear el producto');
+      state = RemoteError(mensajeDeError(e));
     }
   }
 

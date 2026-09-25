@@ -8,6 +8,7 @@ import '../services/permissions_service.dart';
 import '../services/location_service.dart';
 import '../services/local_storage_service.dart';
 import '../state/auth_state.dart';
+import '../services/api_client.dart';
 
 class ReportarPrecioScreen extends ConsumerStatefulWidget {
   final String productoId;
@@ -59,6 +60,9 @@ class _ReportarPrecioScreenState extends ConsumerState<ReportarPrecioScreen> {
         _cargandoEstablecimientos = false;
       });
     } catch (e) {
+      if (e is AuthException) {
+        ref.read(authProvider.notifier).sessionExpired();
+      }
       setState(() => _cargandoEstablecimientos = false);
     }
   }
@@ -206,7 +210,10 @@ class _ReportarPrecioScreenState extends ConsumerState<ReportarPrecioScreen> {
         context.go('/productos/${widget.productoId}/precios');
       }
     } catch (e) {
-      setState(() => _errorGeneral = 'No se pudo reportar el precio');
+      if (e is AuthException) {
+        ref.read(authProvider.notifier).sessionExpired();
+      }
+      setState(() => _errorGeneral = mensajeDeError(e));
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
