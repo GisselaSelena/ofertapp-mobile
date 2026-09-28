@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../state/auth_state.dart';
 import '../services/api_client.dart';
+import '../utils/formatters.dart';
 
 class ProductoPreciosScreen extends ConsumerStatefulWidget {
   final String productoId;
@@ -226,7 +227,7 @@ class _ProductoPreciosScreenState
                                       ),
                                     ),
                                     Text(
-                                      '\$${precio['valor']}',
+                                      formatearPrecio(precio['valor'] as num),
                                       style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.w700,

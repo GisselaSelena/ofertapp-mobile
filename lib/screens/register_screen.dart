@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
 import '../state/auth_state.dart';
+import '../utils/validadores.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -78,9 +79,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         labelText: 'Nombre',
                         prefixIcon: Icon(Icons.person_outline_rounded),
                       ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'El nombre es obligatorio'
-                          : null,
+                      validator: validarNombre,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -90,9 +89,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         prefixIcon: Icon(Icons.mail_outline_rounded),
                       ),
                       keyboardType: TextInputType.emailAddress,
-                      validator: (v) => (v == null || !v.contains('@'))
-                          ? 'Ingresa un correo válido'
-                          : null,
+                      validator: validarEmail,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -102,9 +99,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         prefixIcon: Icon(Icons.lock_outline_rounded),
                       ),
                       obscureText: true,
-                      validator: (v) => (v == null || v.length < 6)
-                          ? 'Debe tener al menos 6 caracteres'
-                          : null,
+                      validator: validarPassword,
                     ),
                     const SizedBox(height: 20),
                     if (_errorGeneral != null)

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 import '../state/productos_state.dart';
 import '../state/form_draft_state.dart';
+import '../utils/validadores.dart';
 
 class ProductoFormScreen extends ConsumerStatefulWidget {
   const ProductoFormScreen({super.key});
@@ -39,16 +40,6 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
     _categoriaController.dispose();
     _nombreFocus.dispose();
     super.dispose();
-  }
-
-  String? _validarNombre(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'El nombre es obligatorio';
-    }
-    if (value.trim().length < 3) {
-      return 'Debe tener al menos 3 caracteres';
-    }
-    return null;
   }
 
   Future<void> _submit() async {
@@ -105,7 +96,7 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                   prefixIcon: const Icon(Icons.shopping_bag_outlined),
                   errorText: erroresDeCampo?['nombre'],
                 ),
-                validator: _validarNombre,
+                validator: validarNombreProducto,
                 onChanged: (value) => ref
                     .read(productoFormDraftProvider.notifier)
                     .actualizarNombre(value),

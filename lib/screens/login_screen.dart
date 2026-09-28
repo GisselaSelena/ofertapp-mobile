@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_client.dart';
 import '../state/auth_state.dart';
+import '../utils/validadores.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final String? destinoPendiente;
@@ -26,18 +27,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  String? _validarEmail(String? value) {
-    if (value == null || value.trim().isEmpty) return 'El correo es obligatorio';
-    if (!value.contains('@')) return 'Ingresa un correo válido';
-    return null;
-  }
-
-  String? _validarPassword(String? value) {
-    if (value == null || value.isEmpty) return 'La contraseña es obligatoria';
-    if (value.length < 6) return 'Debe tener al menos 6 caracteres';
-    return null;
   }
 
   Future<void> _submit() async {
@@ -124,7 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: Icon(Icons.mail_outline_rounded),
                       ),
                       keyboardType: TextInputType.emailAddress,
-                      validator: _validarEmail,
+                      validator: validarEmail,
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -141,7 +130,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       obscureText: !_mostrarPassword,
-                      validator: _validarPassword,
+                      validator: validarPassword,
                     ),
                     const SizedBox(height: 20),
                     if (_errorGeneral != null)
