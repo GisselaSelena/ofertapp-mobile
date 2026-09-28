@@ -1,9 +1,17 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config.dart';
 
 class ApiClient {
+  final http.Client _client;
+  final Duration _timeout;
   String? _token;
+
+  /// [client] permite inyectar un http.Client falso en tests (sin red).
+  /// [timeout] es el tiempo máximo de espera por request; por defecto 10s.
+  ApiClient({http.Client? client, this._timeout = const Duration(seconds: 10)})
+      : _client = client ?? http.Client();
 
   void setToken(String? token) {
     _token = token;
@@ -15,28 +23,36 @@ class ApiClient {
       };
 
   Future<dynamic> get(String path) async {
-    final response = await http.get(
+    final response = await _conTimeout(_client.get(
       Uri.parse('${Config.apiBaseUrl}$path'),
       headers: _headers,
-    );
+    ));
     return _handleResponse(response);
   }
 
   Future<dynamic> post(String path, Map<String, dynamic> body) async {
-    final response = await http.post(
+    final response = await _conTimeout(_client.post(
       Uri.parse('${Config.apiBaseUrl}$path'),
       headers: _headers,
       body: jsonEncode(body),
-    );
+    ));
     return _handleResponse(response);
   }
 
   Future<dynamic> delete(String path) async {
-    final response = await http.delete(
+    final response = await _conTimeout(_client.delete(
       Uri.parse('${Config.apiBaseUrl}$path'),
       headers: _headers,
-    );
+    ));
     return _handleResponse(response);
+  }
+
+  Future<http.Response> _conTimeout(Future<http.Response> request) async {
+    try {
+      return await request.timeout(_timeout);
+    } on TimeoutException {
+      throw ApiException('Tiempo de espera agotado. Verifica tu conexión.');
+    }
   }
 
   dynamic _handleResponse(http.Response response) {
