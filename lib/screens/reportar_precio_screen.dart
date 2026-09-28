@@ -221,8 +221,6 @@ class _ReportarPrecioScreenState extends ConsumerState<ReportarPrecioScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reportar precio'),

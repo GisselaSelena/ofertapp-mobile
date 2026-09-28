@@ -14,7 +14,7 @@ import '../screens/perfil_screen.dart';
 
 class _AuthRouterRefresh extends ChangeNotifier {
   _AuthRouterRefresh(Ref ref) {
-    ref.listen(authProvider, (_, __) => notifyListeners());
+    ref.listen(authProvider, (_, _) => notifyListeners());
   }
 }
 

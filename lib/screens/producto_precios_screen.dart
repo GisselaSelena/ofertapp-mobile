@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../state/auth_state.dart';
 import '../services/api_client.dart';
 import '../utils/formatters.dart';
+import '../utils/app_logger.dart';
 
 class ProductoPreciosScreen extends ConsumerStatefulWidget {
   final String productoId;
@@ -70,6 +71,11 @@ class _ProductoPreciosScreenState
         _cargandoResumenIa = false;
       });
     } catch (e) {
+      // Antes esto se tragaba en silencio, sin ningún rastro. No se logea
+      // e.toString() crudo (podría filtrar detalles de la request); solo
+      // el tipo de excepción y el producto, nunca token/contraseña/correo.
+      appLogger.warning(
+          'resumen-ia no disponible para producto ${widget.productoId}: ${e.runtimeType}');
       if (mounted) setState(() => _cargandoResumenIa = false);
     }
   }

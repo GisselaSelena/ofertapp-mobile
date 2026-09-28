@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'router/app_router.dart';
+import 'utils/app_logger.dart';
 
 void main() {
+  configurarLogging();
   runApp(const ProviderScope(child: MyApp()));
 }
 
