@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/models.dart';
 import '../services/api_client.dart';
+import '../utils/sentry_setup.dart';
 
 /// AuthState representa el estado de sesión: null = no autenticado.
 /// Es "estado de aplicación" porque lo necesitan varias pantallas
@@ -29,6 +30,7 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
     _apiClient.setToken(token);
     state = AuthState(token: token, usuario: usuario);
+    await identificarUsuarioEnSentry(usuario.id);
   }
 
   Future<void> register(String nombre, String email, String password) async {
@@ -43,18 +45,21 @@ class AuthNotifier extends StateNotifier<AuthState?> {
 
     _apiClient.setToken(token);
     state = AuthState(token: token, usuario: usuario);
+    await identificarUsuarioEnSentry(usuario.id);
   }
 
-  void logout() {
+  Future<void> logout() async {
     _apiClient.setToken(null);
     state = null;
+    await olvidarUsuarioEnSentry();
   }
 
   /// Se llama cuando el backend responde 401 en cualquier petición:
   /// limpia la sesión para que el router redirija a /login.
-  void sessionExpired() {
+  Future<void> sessionExpired() async {
     _apiClient.setToken(null);
     state = null;
+    await olvidarUsuarioEnSentry();
   }
 }
 

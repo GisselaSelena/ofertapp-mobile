@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -90,6 +91,33 @@ class PerfilScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (kDebugMode) ...[
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    // Error intencional, sin atrapar: sube por la zona que
+                    // sentry_flutter arma en initSentryAndRun() y prueba el
+                    // camino real de "error no atrapado", no una llamada
+                    // manual a Sentry.captureException.
+                    throw StateError(
+                        'Error de prueba intencional para verificar Sentry (OfertApp)');
+                  },
+                  icon: const Icon(Icons.bug_report_outlined,
+                      color: Color(0xFF92400E)),
+                  label: const Text('Probar reporte a Sentry (debug)'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF92400E),
+                    side: const BorderSide(color: Color(0xFFFEF3C7)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

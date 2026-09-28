@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'router/app_router.dart';
 import 'utils/app_logger.dart';
+import 'utils/sentry_setup.dart';
 
-void main() {
-  configurarLogging();
-  runApp(const ProviderScope(child: MyApp()));
+Future<void> main() async {
+  // initSentryAndRun corre appRunner dentro de la zona que sentry_flutter
+  // arma para capturar errores no atrapados (ver sentry_setup.dart).
+  await initSentryAndRun(() {
+    configurarLogging();
+    runApp(const ProviderScope(child: MyApp()));
+  });
 }
 
 // Paleta elegante: verde azulado profundo + acentos cálidos, sobre

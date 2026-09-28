@@ -25,5 +25,22 @@ void main() {
       expect(records.last.level, Level.WARNING);
       sub.cancel();
     });
+
+    test('un SEVERE intenta reportarse a Sentry sin lanzar (no-op seguro sin Sentry.init)',
+        () async {
+      configurarLogging();
+
+      // Sentry no está inicializado en este entorno de test (no hay
+      // SentryFlutter.init) -- debe ser un no-op seguro (NoOpHub), nunca
+      // una excepción, aunque el registro tenga error/stackTrace real.
+      expect(
+        () => appLogger.severe('fallo grave de prueba', StateError('boom'), StackTrace.current),
+        returnsNormally,
+      );
+
+      // Deja que corra el microtask del listener (Sentry.captureException
+      // es async) antes de terminar el test.
+      await Future<void>.delayed(Duration.zero);
+    });
   });
 }
