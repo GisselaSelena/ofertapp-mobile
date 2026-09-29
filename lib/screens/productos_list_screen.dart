@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +19,7 @@ class ProductosListScreen extends ConsumerStatefulWidget {
 class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
   final Set<String> _agregandoFavorito = {};
   final TextEditingController _busquedaController = TextEditingController();
+  Timer? _debounceBusqueda;
   String _busqueda = '';
 
   @override
@@ -24,12 +27,17 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
     super.initState();
     Future.microtask(() => ref.read(productosProvider.notifier).cargar());
     _busquedaController.addListener(() {
-      setState(() => _busqueda = _busquedaController.text.trim().toLowerCase());
+      _debounceBusqueda?.cancel();
+      _debounceBusqueda = Timer(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        setState(() => _busqueda = _busquedaController.text.trim().toLowerCase());
+      });
     });
   }
 
   @override
   void dispose() {
+    _debounceBusqueda?.cancel();
     _busquedaController.dispose();
     super.dispose();
   }
@@ -102,12 +110,15 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
               decoration: InputDecoration(
                 hintText: 'Busca un producto, ej. arroz, pollo...',
                 prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _busqueda.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close_rounded),
-                        onPressed: () => _busquedaController.clear(),
-                      )
-                    : null,
+                suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _busquedaController,
+                  builder: (context, value, child) => value.text.trim().isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => _busquedaController.clear(),
+                        )
+                      : const SizedBox.shrink(),
+                ),
               ),
             ),
           ),

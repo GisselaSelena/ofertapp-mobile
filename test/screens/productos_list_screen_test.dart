@@ -53,6 +53,34 @@ void main() {
       expect(find.text('Aún no hay productos registrados'), findsNothing);
     });
 
+    testWidgets('busqueda espera 300ms y cancela el debounce anterior', (tester) async {
+      final productos = [
+        Producto(id: '1', nombre: 'Arroz Diana 1kg', categoria: 'abarrotes'),
+        Producto(id: '2', nombre: 'Aceite La Favorita'),
+      ];
+
+      await tester.pumpWidget(_pantallaConEstado(RemoteSuccess(productos)));
+      await tester.pumpAndSettle();
+
+      final controller = tester.widget<TextField>(find.byType(TextField)).controller!;
+      controller.text = 'ar';
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      controller.text = 'aceite';
+      await tester.pump();
+      expect(find.text('Arroz Diana 1kg'), findsOneWidget);
+      expect(find.text('Aceite La Favorita'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 299));
+      expect(find.text('Arroz Diana 1kg'), findsOneWidget);
+      expect(find.text('Aceite La Favorita'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(find.text('Arroz Diana 1kg'), findsNothing);
+      expect(find.text('Aceite La Favorita'), findsOneWidget);
+    });
+
     testWidgets('estado vacío -> muestra el mensaje de lista vacía', (tester) async {
       await tester.pumpWidget(_pantallaConEstado(const RemoteSuccess(<Producto>[])));
       await tester.pumpAndSettle();
