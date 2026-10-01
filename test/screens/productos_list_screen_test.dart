@@ -33,14 +33,25 @@ class _FakeAuthNotifier extends AuthNotifier {
   }
 }
 
-class _Api409Client extends ApiClient {
-  _Api409Client(this.mensaje);
-
-  final String mensaje;
+class _ApiConflictClient extends ApiClient {
+  int llamadasDelete = 0;
+  final List<Map<String, String>?> parametros = [];
 
   @override
-  Future<dynamic> delete(String path) async {
-    throw ApiException(mensaje);
+  Future<dynamic> delete(
+    String path, {
+    Map<String, String>? queryParameters,
+  }) async {
+    llamadasDelete++;
+    parametros.add(queryParameters);
+    if (queryParameters?['forzar'] == 'true') return null;
+    throw ConflictException(
+      mensaje: 'El producto tiene datos asociados',
+      nombre: 'Arroz',
+      precios: 2,
+      favoritos: 3,
+      promociones: 1,
+    );
   }
 }
 
@@ -120,16 +131,15 @@ void main() {
       expect(find.text('Eliminar'), findsOneWidget);
     });
 
-    testWidgets('409 de eliminación muestra el mensaje del servidor', (
-      tester,
+    Future<void> iniciarEliminacionConConflicto(
+      WidgetTester tester,
+      _ApiConflictClient apiClient,
     ) async {
-      const mensaje =
-          'No se puede eliminar el producto 1: tiene precios asociados';
       await tester.pumpWidget(
         _pantallaConEstado(
           RemoteSuccess([Producto(id: '1', nombre: 'Arroz')]),
           administrador: true,
-          apiClient: _Api409Client(mensaje),
+          apiClient: apiClient,
         ),
       );
       await tester.pumpAndSettle();
@@ -140,8 +150,55 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Eliminar').last);
       await tester.pumpAndSettle();
+    }
 
-      expect(find.text(mensaje), findsOneWidget);
+    testWidgets('409 muestra el diálogo con conteos del backend', (
+      tester,
+    ) async {
+      final apiClient = _ApiConflictClient();
+      await iniciarEliminacionConConflicto(tester, apiClient);
+
+      expect(
+        find.text(
+          'Arroz tiene 2 precios, 3 favoritos y 1 promociones. '
+          '¿Eliminarlo junto con todos sus datos? Esta acción no se puede deshacer.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Cancelar'), findsOneWidget);
+      expect(find.text('Eliminar todo'), findsOneWidget);
+    });
+
+    testWidgets('Cancelar en el diálogo 409 no hace el borrado forzado', (
+      tester,
+    ) async {
+      final apiClient = _ApiConflictClient();
+      await iniciarEliminacionConConflicto(tester, apiClient);
+
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(apiClient.llamadasDelete, 1);
+      expect(apiClient.parametros.single, isNull);
+      expect(find.text('Arroz'), findsOneWidget);
+      expect(find.text('Producto con datos asociados'), findsNothing);
+    });
+
+    testWidgets('Eliminar todo repite la llamada con forzar=true y refresca', (
+      tester,
+    ) async {
+      final apiClient = _ApiConflictClient();
+      await iniciarEliminacionConConflicto(tester, apiClient);
+
+      await tester.tap(find.text('Eliminar todo'));
+      await tester.pumpAndSettle();
+
+      expect(apiClient.llamadasDelete, 2);
+      expect(apiClient.parametros.last, {'forzar': 'true'});
+      expect(
+        find.text('Producto y todos sus datos eliminados'),
+        findsOneWidget,
+      );
       expect(find.text('Arroz'), findsOneWidget);
       expect(find.text('Eliminar producto'), findsNothing);
     });

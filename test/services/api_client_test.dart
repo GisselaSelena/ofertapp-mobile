@@ -86,24 +86,42 @@ void main() {
       );
     });
 
-    test('409 -> expone el mensaje detail devuelto por el backend', () async {
-      final fake = _FakeHttpClient(
-        (req) async =>
-            _respuesta(409, '{"detail":"El producto tiene precios asociados"}'),
-      );
+    test('DELETE acepta parámetros de consulta', () async {
+      final fake = _FakeHttpClient((req) async => _respuesta(204, ''));
       final client = ApiClient(client: fake);
 
-      await expectLater(
-        client.delete('/api/productos/abc'),
-        throwsA(
-          isA<ApiException>().having(
-            (e) => e.message,
-            'mensaje del servidor',
-            'El producto tiene precios asociados',
-          ),
-        ),
+      await client.delete(
+        '/api/productos/abc',
+        queryParameters: const {'forzar': 'true'},
       );
+
+      expect(fake.ultimaRequest!.url.queryParameters, {'forzar': 'true'});
     });
+
+    test(
+      '409 -> conserva el nombre y conteos estructurados del backend',
+      () async {
+        final fake = _FakeHttpClient(
+          (req) async => _respuesta(
+            409,
+            '{"detail":{"mensaje":"Tiene datos asociados","nombre":"Arroz",'
+            '"precios":2,"favoritos":3,"promociones":1}}',
+          ),
+        );
+        final client = ApiClient(client: fake);
+
+        try {
+          await client.delete('/api/productos/abc');
+          fail('debería haber lanzado ConflictException');
+        } on ConflictException catch (e) {
+          expect(e.message, 'Tiene datos asociados');
+          expect(e.nombre, 'Arroz');
+          expect(e.precios, 2);
+          expect(e.favoritos, 3);
+          expect(e.promociones, 1);
+        }
+      },
+    );
 
     test('200 con cuerpo vacío -> devuelve null (ej. DELETE 204)', () async {
       final fake = _FakeHttpClient((req) async => _respuesta(204, ''));
