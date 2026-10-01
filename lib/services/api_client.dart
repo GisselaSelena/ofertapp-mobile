@@ -53,10 +53,15 @@ class ApiClient {
     return _handleResponse(response);
   }
 
-  Future<dynamic> delete(String path) async {
-    final response = await _conTimeout(
-      _client.delete(Uri.parse('${Config.apiBaseUrl}$path'), headers: _headers),
-    );
+  Future<dynamic> delete(
+    String path, {
+    Map<String, String>? queryParameters,
+  }) async {
+    var uri = Uri.parse('${Config.apiBaseUrl}$path');
+    if (queryParameters != null) {
+      uri = uri.replace(queryParameters: queryParameters);
+    }
+    final response = await _conTimeout(_client.delete(uri, headers: _headers));
     return _handleResponse(response);
   }
 
@@ -90,23 +95,51 @@ class ApiClient {
     }
 
     if (status == 409) {
-      final detail = _extractDetail(response.body);
-      throw ApiException(detail ?? 'Conflicto al procesar la solicitud');
+      throw _conflictFromResponse(response.body);
     }
 
     throw ApiException('Error inesperado (código $status)');
   }
 
-  String? _extractDetail(String body) {
+  ConflictException _conflictFromResponse(String body) {
     try {
       final data = jsonDecode(body);
-      if (data is Map && data['detail'] is String) {
-        return data['detail'] as String;
+      final detail = data is Map ? data['detail'] : null;
+      if (detail is Map) {
+        return ConflictException(
+          mensaje:
+              detail['mensaje']?.toString() ??
+              'Conflicto al procesar la solicitud',
+          nombre: detail['nombre']?.toString() ?? '',
+          precios: _toInt(detail['precios']),
+          favoritos: _toInt(detail['favoritos']),
+          promociones: _toInt(detail['promociones']),
+        );
+      }
+      if (detail is String) {
+        return ConflictException(
+          mensaje: detail,
+          nombre: '',
+          precios: 0,
+          favoritos: 0,
+          promociones: 0,
+        );
       }
     } on FormatException {
-      return null;
+      // Se usa un mensaje genérico abajo cuando la respuesta no es JSON.
     }
-    return null;
+    return ConflictException(
+      mensaje: 'Conflicto al procesar la solicitud',
+      nombre: '',
+      precios: 0,
+      favoritos: 0,
+      promociones: 0,
+    );
+  }
+
+  int _toInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   Map<String, String> _extractFieldErrors(dynamic data) {
@@ -144,6 +177,21 @@ class ValidationException implements Exception {
 class ApiException implements Exception {
   final String message;
   ApiException(this.message);
+}
+
+class ConflictException extends ApiException {
+  final String nombre;
+  final int precios;
+  final int favoritos;
+  final int promociones;
+
+  ConflictException({
+    required String mensaje,
+    required this.nombre,
+    required this.precios,
+    required this.favoritos,
+    required this.promociones,
+  }) : super(mensaje);
 }
 
 /// Traduce cualquier error capturado de una llamada a la API a un mensaje
