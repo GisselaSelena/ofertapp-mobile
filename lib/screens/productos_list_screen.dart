@@ -97,19 +97,69 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
 
     try {
       await ref.read(apiClientProvider).delete('/api/productos/${producto.id}');
-      await ref.read(productosProvider.notifier).cargar();
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Producto eliminado')));
+      await _refrescarTrasEliminacion('Producto eliminado');
+    } on ConflictException catch (e) {
+      if (!mounted) return;
+      final confirmarForzado = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Producto con datos asociados'),
+          content: Text(
+            '${e.nombre} tiene ${e.precios} precios, ${e.favoritos} favoritos '
+            'y ${e.promociones} promociones. ¿Eliminarlo junto con todos sus '
+            'datos? Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Eliminar todo'),
+            ),
+          ],
+        ),
+      );
+      if (confirmarForzado != true || !mounted) return;
+
+      try {
+        await ref
+            .read(apiClientProvider)
+            .delete(
+              '/api/productos/${producto.id}',
+              queryParameters: const {'forzar': 'true'},
+            );
+        await _refrescarTrasEliminacion(
+          'Producto y todos sus datos eliminados',
+        );
+      } catch (e) {
+        _manejarErrorEliminacion(e);
       }
     } catch (e) {
-      if (e is AuthException) {
-        ref.read(authProvider.notifier).sessionExpired();
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(mensajeDeError(e))));
-      }
+      _manejarErrorEliminacion(e);
+    }
+  }
+
+  Future<void> _refrescarTrasEliminacion(String mensaje) async {
+    await ref.read(productosProvider.notifier).cargar();
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(mensaje)));
+    }
+  }
+
+  void _manejarErrorEliminacion(Object error) {
+    if (error is AuthException) {
+      ref.read(authProvider.notifier).sessionExpired();
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(mensajeDeError(error))));
     }
   }
 
