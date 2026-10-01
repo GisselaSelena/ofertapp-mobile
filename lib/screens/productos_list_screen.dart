@@ -331,6 +331,28 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
                   right: 0,
                   child: PopupMenuButton<String>(
                     tooltip: 'Opciones de ${producto.nombre}',
+                    padding: EdgeInsets.zero,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.88),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.16),
+                            blurRadius: 5,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.more_vert_rounded,
+                        color: primary,
+                        size: 22,
+                      ),
+                    ),
                     onSelected: (opcion) {
                       if (opcion == 'editar') {
                         context.go('/productos/editar', extra: producto);
