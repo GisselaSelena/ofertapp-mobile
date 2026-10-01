@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/legacy.dart';
+
 import '../models/models.dart';
 import '../services/api_client.dart';
 import 'auth_state.dart';
@@ -36,7 +37,7 @@ class ProductosNotifier extends StateNotifier<RemoteOpState<List<Producto>>> {
   final AuthNotifier _authNotifier;
 
   ProductosNotifier(this._apiClient, this._authNotifier)
-      : super(const RemoteIdle());
+    : super(const RemoteIdle());
 
   Future<void> cargar() async {
     state = const RemoteLoading();
@@ -58,13 +59,14 @@ class ProductosNotifier extends StateNotifier<RemoteOpState<List<Producto>>> {
 }
 
 final productosProvider =
-    StateNotifierProvider<ProductosNotifier, RemoteOpState<List<Producto>>>(
-        (ref) {
-  return ProductosNotifier(
-    ref.watch(apiClientProvider),
-    ref.watch(authProvider.notifier),
-  );
-});
+    StateNotifierProvider<ProductosNotifier, RemoteOpState<List<Producto>>>((
+      ref,
+    ) {
+      return ProductosNotifier(
+        ref.watch(apiClientProvider),
+        ref.watch(authProvider.notifier),
+      );
+    });
 
 /// Notifier para la CREACIÓN de un producto (POST /api/productos).
 /// Separado del listado porque es una operación distinta con su propio
@@ -74,7 +76,7 @@ class CrearProductoNotifier extends StateNotifier<RemoteOpState<Producto>> {
   final AuthNotifier _authNotifier;
 
   CrearProductoNotifier(this._apiClient, this._authNotifier)
-      : super(const RemoteIdle());
+    : super(const RemoteIdle());
 
   Future<void> crear({required String nombre, String? categoria}) async {
     state = const RemoteLoading();
@@ -90,8 +92,37 @@ class CrearProductoNotifier extends StateNotifier<RemoteOpState<Producto>> {
     } on ForbiddenException catch (e) {
       state = RemoteError(e.message);
     } on ValidationException catch (e) {
-      state = RemoteError('Revisa los campos marcados',
-          fieldErrors: e.fieldErrors);
+      state = RemoteError(
+        'Revisa los campos marcados',
+        fieldErrors: e.fieldErrors,
+      );
+    } catch (e) {
+      state = RemoteError(mensajeDeError(e));
+    }
+  }
+
+  Future<void> actualizar({
+    required String id,
+    required String nombre,
+    String? categoria,
+  }) async {
+    state = const RemoteLoading();
+    try {
+      final data = await _apiClient.put('/api/productos/$id', {
+        'nombre': nombre,
+        'categoria': categoria == null || categoria.isEmpty ? null : categoria,
+      });
+      state = RemoteSuccess(Producto.fromJson(data));
+    } on AuthException {
+      _authNotifier.sessionExpired();
+      state = const RemoteError('Sesión expirada');
+    } on ForbiddenException catch (e) {
+      state = RemoteError(e.message);
+    } on ValidationException catch (e) {
+      state = RemoteError(
+        'Revisa los campos marcados',
+        fieldErrors: e.fieldErrors,
+      );
     } catch (e) {
       state = RemoteError(mensajeDeError(e));
     }
@@ -101,10 +132,11 @@ class CrearProductoNotifier extends StateNotifier<RemoteOpState<Producto>> {
 }
 
 final crearProductoProvider =
-    StateNotifierProvider<CrearProductoNotifier, RemoteOpState<Producto>>(
-        (ref) {
-  return CrearProductoNotifier(
-    ref.watch(apiClientProvider),
-    ref.watch(authProvider.notifier),
-  );
-});
+    StateNotifierProvider<CrearProductoNotifier, RemoteOpState<Producto>>((
+      ref,
+    ) {
+      return CrearProductoNotifier(
+        ref.watch(apiClientProvider),
+        ref.watch(authProvider.notifier),
+      );
+    });

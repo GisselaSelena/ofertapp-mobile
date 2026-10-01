@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../state/productos_state.dart';
 import '../state/auth_state.dart';
 import '../services/api_client.dart';
@@ -30,7 +31,9 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
       _debounceBusqueda?.cancel();
       _debounceBusqueda = Timer(const Duration(milliseconds: 300), () {
         if (!mounted) return;
-        setState(() => _busqueda = _busquedaController.text.trim().toLowerCase());
+        setState(
+          () => _busqueda = _busquedaController.text.trim().toLowerCase(),
+        );
       });
     });
   }
@@ -48,9 +51,9 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
       final apiClient = ref.read(apiClientProvider);
       await apiClient.post('/api/favoritos', {'producto_id': productoId});
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Agregado a favoritos')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Agregado a favoritos')));
       }
     } catch (e) {
       if (e is AuthException) {
@@ -59,9 +62,11 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e is AuthException
-                ? mensajeDeError(e)
-                : 'Ya estaba en tus favoritos, o hubo un error'),
+            content: Text(
+              e is AuthException
+                  ? mensajeDeError(e)
+                  : 'Ya estaba en tus favoritos, o hubo un error',
+            ),
           ),
         );
       }
@@ -70,12 +75,52 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
     }
   }
 
+  Future<void> _eliminarProducto(Producto producto) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar producto'),
+        content: Text('¿Deseas eliminar "${producto.nombre}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+
+    try {
+      await ref.read(apiClientProvider).delete('/api/productos/${producto.id}');
+      await ref.read(productosProvider.notifier).cargar();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Producto eliminado')));
+      }
+    } catch (e) {
+      if (e is AuthException) {
+        ref.read(authProvider.notifier).sessionExpired();
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(mensajeDeError(e))));
+      }
+    }
+  }
+
   List<Producto> _filtrar(List<Producto> productos) {
     if (_busqueda.isEmpty) return productos;
     return productos
-        .where((p) =>
-            p.nombre.toLowerCase().contains(_busqueda) ||
-            (p.categoria?.toLowerCase().contains(_busqueda) ?? false))
+        .where(
+          (p) =>
+              p.nombre.toLowerCase().contains(_busqueda) ||
+              (p.categoria?.toLowerCase().contains(_busqueda) ?? false),
+        )
         .toList();
   }
 
@@ -112,7 +157,8 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _busquedaController,
-                  builder: (context, value, child) => value.text.trim().isNotEmpty
+                  builder: (context, value, child) =>
+                      value.text.trim().isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.close_rounded),
                           onPressed: () => _busquedaController.clear(),
@@ -124,18 +170,25 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
           ),
           Expanded(
             child: switch (estado) {
-              RemoteIdle() || RemoteLoading() =>
-                const Center(child: CircularProgressIndicator()),
+              RemoteIdle() || RemoteLoading() => const Center(
+                child: CircularProgressIndicator(),
+              ),
               RemoteError(:final message) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text('Error: $message',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red)),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Error: $message',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ),
+              ),
               RemoteSuccess(:final data) => _buildLista(
-                  context, _filtrar(data), primary, esAdmin),
+                context,
+                _filtrar(data),
+                primary,
+                esAdmin,
+              ),
             },
           ),
         ],
@@ -150,14 +203,22 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
     );
   }
 
-  Widget _buildLista(BuildContext context, List<Producto> productos,
-      Color primary, bool esAdmin) {
+  Widget _buildLista(
+    BuildContext context,
+    List<Producto> productos,
+    Color primary,
+    bool esAdmin,
+  ) {
     if (productos.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off_rounded, size: 56, color: Colors.grey.shade300),
+            Icon(
+              Icons.search_off_rounded,
+              size: 56,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 12),
             Text(
               _busqueda.isEmpty
@@ -185,70 +246,105 @@ class _ProductosListScreenState extends ConsumerState<ProductosListScreen> {
 
         return Card(
           clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => context.go('/productos/${producto.id}/precios'),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 64,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.shopping_basket_outlined,
-                        color: primary, size: 30),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    producto.nombre,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 14),
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Stack(
+            children: [
+              InkWell(
+                onTap: () => context.go('/productos/${producto.id}/precios'),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (producto.categoria != null)
-                        Flexible(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F4),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              producto.categoria!,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 10, color: Color(0xFF6B7280)),
-                            ),
-                          ),
-                        )
-                      else
-                        const SizedBox(),
-                      cargandoFavorito
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                      Container(
+                        height: 64,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.shopping_basket_outlined,
+                          color: primary,
+                          size: 30,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        producto.nombre,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontSize: 14),
+                      ),
+                      const Spacer(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          if (producto.categoria != null)
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F4),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  producto.categoria!,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ),
                             )
-                          : GestureDetector(
-                              onTap: () => _agregarAFavoritos(producto.id),
-                              child: Icon(Icons.favorite_border_rounded,
-                                  color: primary, size: 20),
-                            ),
+                          else
+                            const SizedBox(),
+                          cargandoFavorito
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : GestureDetector(
+                                  onTap: () => _agregarAFavoritos(producto.id),
+                                  child: Icon(
+                                    Icons.favorite_border_rounded,
+                                    color: primary,
+                                    size: 20,
+                                  ),
+                                ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
+              if (esAdmin)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: PopupMenuButton<String>(
+                    tooltip: 'Opciones de ${producto.nombre}',
+                    onSelected: (opcion) {
+                      if (opcion == 'editar') {
+                        context.go('/productos/editar', extra: producto);
+                      } else if (opcion == 'eliminar') {
+                        _eliminarProducto(producto);
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'editar', child: Text('Editar')),
+                      PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
+                    ],
+                  ),
+                ),
+            ],
           ),
         );
       },

@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../state/productos_state.dart';
 import '../state/form_draft_state.dart';
 import '../utils/validadores.dart';
+import '../models/models.dart';
 
 class ProductoFormScreen extends ConsumerStatefulWidget {
-  const ProductoFormScreen({super.key});
+  final Producto? producto;
+
+  const ProductoFormScreen({super.key, this.producto});
 
   @override
-  ConsumerState<ProductoFormScreen> createState() =>
-      _ProductoFormScreenState();
+  ConsumerState<ProductoFormScreen> createState() => _ProductoFormScreenState();
 }
 
 class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
@@ -23,8 +26,14 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   void initState() {
     super.initState();
     final draft = ref.read(productoFormDraftProvider);
-    _nombreController = TextEditingController(text: draft.nombre);
-    _categoriaController = TextEditingController(text: draft.categoria);
+    _nombreController = TextEditingController(
+      text: widget.producto == null ? draft.nombre : widget.producto!.nombre,
+    );
+    _categoriaController = TextEditingController(
+      text: widget.producto == null
+          ? draft.categoria
+          : widget.producto!.categoria ?? '',
+    );
 
     _nombreFocus.addListener(() {
       if (!_nombreFocus.hasFocus) {
@@ -44,14 +53,27 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    await ref.read(crearProductoProvider.notifier).crear(
-          nombre: _nombreController.text.trim(),
-          categoria: _categoriaController.text.trim(),
-        );
+    final notifier = ref.read(crearProductoProvider.notifier);
+    if (widget.producto == null) {
+      await notifier.crear(
+        nombre: _nombreController.text.trim(),
+        categoria: _categoriaController.text.trim(),
+      );
+    } else {
+      await notifier.actualizar(
+        id: widget.producto!.id,
+        nombre: _nombreController.text.trim(),
+        categoria: _categoriaController.text.trim(),
+      );
+    }
 
     final estado = ref.read(crearProductoProvider);
     if (estado is RemoteSuccess) {
-      ref.read(productoFormDraftProvider.notifier).limpiar();
+      if (widget.producto == null) {
+        ref.read(productoFormDraftProvider.notifier).limpiar();
+      } else {
+        await ref.read(productosProvider.notifier).cargar();
+      }
       ref.read(crearProductoProvider.notifier).reset();
       if (mounted) context.go('/productos');
     }
@@ -74,7 +96,9 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nuevo producto'),
+        title: Text(
+          widget.producto == null ? 'Nuevo producto' : 'Editar producto',
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/productos'),
@@ -96,9 +120,13 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                   errorText: erroresDeCampo?['nombre'],
                 ),
                 validator: validarNombreProducto,
-                onChanged: (value) => ref
-                    .read(productoFormDraftProvider.notifier)
-                    .actualizarNombre(value),
+                onChanged: (value) {
+                  if (widget.producto == null) {
+                    ref
+                        .read(productoFormDraftProvider.notifier)
+                        .actualizarNombre(value);
+                  }
+                },
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -108,9 +136,13 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                   prefixIcon: const Icon(Icons.label_outline_rounded),
                   errorText: erroresDeCampo?['categoria'],
                 ),
-                onChanged: (value) => ref
-                    .read(productoFormDraftProvider.notifier)
-                    .actualizarCategoria(value),
+                onChanged: (value) {
+                  if (widget.producto == null) {
+                    ref
+                        .read(productoFormDraftProvider.notifier)
+                        .actualizarCategoria(value);
+                  }
+                },
               ),
               const SizedBox(height: 24),
               if (mensajeError != null)
@@ -136,9 +168,15 @@ class _ProductoFormScreenState extends ConsumerState<ProductoFormScreen> {
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.4),
+                            color: Colors.white,
+                            strokeWidth: 2.4,
+                          ),
                         )
-                      : const Text('Guardar producto'),
+                      : Text(
+                          widget.producto == null
+                              ? 'Guardar producto'
+                              : 'Guardar cambios',
+                        ),
                 ),
               ),
             ],

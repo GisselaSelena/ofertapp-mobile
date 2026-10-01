@@ -11,6 +11,7 @@ import '../screens/producto_precios_screen.dart';
 import '../screens/reportar_precio_screen.dart';
 import '../screens/favoritos_screen.dart';
 import '../screens/perfil_screen.dart';
+import '../models/models.dart';
 
 class _AuthRouterRefresh extends ChangeNotifier {
   _AuthRouterRefresh(Ref ref) {
@@ -57,6 +58,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'nuevo',
             builder: (context, state) => const ProductoFormScreen(),
+          ),
+          GoRoute(
+            path: 'editar',
+            builder: (context, state) =>
+                ProductoFormScreen(producto: state.extra! as Producto),
           ),
         ],
       ),
